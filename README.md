@@ -7,8 +7,8 @@
 
 ## デモ
 
-`https://<your-account>.github.io/<repo>/`
-（このリポジトリを GitHub Pages で公開すると、ここがそのままライブデモになります）
+`https://wory-bonbon.github.io/ai-model-release-library/`
+ブラウザで開けばそのまま動作します。
 
 ## 特長
 
