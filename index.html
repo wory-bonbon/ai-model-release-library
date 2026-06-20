@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI生成モデル リリース・ライブラリ（テンプレート）</title>
+<!--
+  AI生成モデル リリース・ライブラリ（テンプレート）
+  単一HTML / 依存ゼロ。ブラウザで開くだけで動作。
+  License: MIT  © 2026 wory?
+  改変・再配布自由。詳細は同梱 README / LICENSE を参照。
+  使い方：本HTMLとモデルのリリース情報をAIに渡すと、冒頭の追記プロトコルに沿って1件追加して返します。
+-->
+
+<!--
+==================================================================================
+  AI更新プロトコル（このファイルをClaudeに渡して追記・更新する際の必須ルール）
+==================================================================================
+  1. 編集対象は下部 script 内の「=== DATA START ===」から「=== DATA END ===」のみ。
+     HTML構造・CSS・レンダリング関数は指示がない限り変更しない。
+  2. 新しいモデルは MODELS 配列の末尾にオブジェクトを1件追加する（既存は消さない）。
+  3. 各モデルは必ず official_url の公式一次情報を web_fetch で再確認してから記入する。
+     二次情報（ブログ・まとめ等）だけで status を "official" にしてはならない。
+  4. 確認できた項目は last_verified を確認日(YYYY-MM-DD)に更新する。
+     確認できなかった項目は推測で埋めず、status を "unverified" のままにする。
+  5. CHANGELOG 先頭に {date, note} を1行追記する。
+  6. META.session_verified（全体の取得日）を更新日に変更する。
+  7. my_usage（活用例）はユーザー固有。指示がない限り削除しない。
+  8. id は星(お気に入り)の紐付けキー。一度決めたら変更しない（変えると星が外れる）。
+     重複しない短い英数字にする（例: sora-2, kling-2-5, nano-banana-2）。
+  -- データ型 / MODELS[] の各要素 --
+    id            : 一意キー（星の紐付け用。変更不可）
+    name          : モデル名
+    vendor        : 提供元（任意）
+    category      : CATEGORIES のキー（t2i / i2v / v2v など）
+    release_date  : リリース日 "YYYY-MM-DD"（日付ソートに使用。不明なら ""）
+    status        : official | partial | unverified（一次情報の確認度）
+    official_url  : 公式一次情報URL（リリースノート/公式ドキュメント）
+    last_verified : 確認日 "YYYY-MM-DD"
+    summary       : 1行サマリー
+    can_do[]      : 何ができるか
+    strengths[]   : 何に強いか（人物系 / 実写 / 高品質 / 参照保持 など タグ的に）
+    innovation[]  : 革新的な部分（無ければ空配列）
+    my_usage[]    : 自分の制作での活用例
+    pricing       : 料金（任意 / 要確認可）
+    commercial    : 商用利用条件（任意 / 要確認可）
+    note          : 補足メモ（任意）
+==================================================================================
+-->
+
+<style>
+  :root{
+    --bg:#f4f3f0; --surface:#ffffff; --surface-2:#faf9f6;
+    --line:#e6e3dd; --line2:#efede8;
+    --ink:#1b1a17; --ink2:#56534c; --muted:#8c887f;
+    --accent:#324a7d; --accent-soft:#eceef5;
+    --ok:#3f7050; --ok-bg:transparent;
+    --teal:#3f6b73; --teal-bg:transparent;
+    --warn:#86652a; --warn-bg:transparent;
+    --bad:#aa5346; --bad-bg:transparent;
+    --info:#3a5079; --info-bg:transparent;
+    --gray:#6f6c64; --gray-bg:transparent;
+    --star:#bd8a2c;
+    --radius:8px;
+    --shadow:0 1px 2px rgba(28,26,22,.05), 0 1px 1px rgba(28,26,22,.03);
+    --font:"Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+    --mono:"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font); background:var(--bg); color:var(--ink); line-height:1.75; font-size:15px; -webkit-font-smoothing:antialiased; letter-spacing:.004em;}
+  .wrap{max-width:1040px; margin:0 auto; padding:40px 28px 100px}
+
+  header.top{background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:22px 24px; margin-bottom:26px; box-shadow:var(--shadow)}
+  header.top h1{margin:0 0 7px; font-size:22px; font-weight:600; letter-spacing:.01em}
+  header.top .sub{font-size:13px; color:var(--ink2); margin:0; line-height:1.65}
+  .meta-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; font-size:12px}
+  .meta-pill{background:var(--surface-2); border:1px solid var(--line); padding:4px 11px; border-radius:6px; color:var(--ink2)}
+  .meta-pill b{color:var(--ink); font-weight:600; font-family:var(--mono); font-size:11.5px}
+
+  section{margin:34px 0}
+  h2{font-size:15px; margin:0 0 16px; padding-bottom:0; border-bottom:none; display:flex; align-items:center; gap:10px; font-weight:600; color:var(--ink); letter-spacing:.01em}
+  h2 .num{background:var(--accent-soft); color:var(--accent); font-family:var(--mono); font-size:11px; font-weight:600; min-width:22px; height:22px; padding:0 6px; border-radius:6px; display:inline-grid; place-items:center; flex:0 0 auto}
+  h3{font-size:11.5px; margin:18px 0 8px; color:var(--muted); font-weight:600; letter-spacing:.04em}
+
+  .note{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; font-size:13.5px; color:var(--ink2); line-height:1.8}
+
+  .badge{display:inline-block; font-size:11px; font-weight:500; padding:2px 9px; border-radius:20px; border:1px solid currentColor; background:color-mix(in srgb, currentColor 7%, transparent); white-space:nowrap; line-height:1.6; vertical-align:middle; letter-spacing:.01em}
+  .s-official{color:var(--ok)}
+  .s-partial{color:var(--teal)}
+  .s-unverified{color:var(--bad)}
+  .cat-badge{color:var(--ink2); border-color:var(--line); background:var(--surface-2); font-weight:500}
+  .tag{color:var(--ink2); border-color:var(--line); background:var(--surface-2); font-weight:500}
+
+  .legend{display:flex; flex-wrap:wrap; gap:10px 18px; font-size:12.5px; color:var(--ink2)}
+  .legend .item{display:flex; align-items:center; gap:6px}
+
+  ul.tight{margin:6px 0; padding-left:20px}
+  ul.tight li{margin:4px 0}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px}
+  .controls input[type=search]{flex:1; min-width:220px; padding:9px 13px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px; font-family:var(--font); background:var(--surface); color:var(--ink)}
+  .controls input[type=search]:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  .controls select{padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius); font-size:13px; font-family:var(--font); background:var(--surface); color:var(--ink2)}
+  .controls button{padding:9px 13px; border:1px solid var(--line); border-radius:var(--radius); font-size:13px; font-family:var(--font); background:var(--surface); color:var(--ink2); cursor:pointer; box-shadow:var(--shadow)}
+  .controls button:hover{background:var(--surface-2)}
+  .filters{display:flex; flex-wrap:wrap; gap:6px}
+  .chip{border:1px solid var(--line); background:var(--surface); color:var(--ink2); font-size:12.5px; padding:6px 12px; border-radius:7px; cursor:pointer; user-select:none}
+  .chip:hover{background:var(--surface-2)}
+  .chip.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .favtoggle{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink2); cursor:pointer; user-select:none; border:1px solid var(--line); background:var(--surface); padding:6px 12px; border-radius:7px}
+  .favtoggle.active{background:#fbf4e2; border-color:var(--star); color:#7c5a14}
+
+  .tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:760px}
+  thead th{background:var(--surface-2); text-align:left; padding:11px 14px; font-size:11px; color:var(--muted); border-bottom:1px solid var(--line); font-weight:600; letter-spacing:.04em}
+  tbody td{padding:11px 14px; border-bottom:1px solid var(--line2); vertical-align:top}
+  tbody tr{cursor:pointer}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--surface-2)}
+  td.name{font-weight:600; color:var(--accent); white-space:nowrap}
+  td .ver{font-family:var(--mono); font-size:11.5px; color:var(--muted)}
+  td.star{text-align:center; width:34px; cursor:pointer; font-size:16px; color:#d2cec6; user-select:none}
+  td.star.on{color:var(--star)}
+  .tags-inline{display:flex; flex-wrap:wrap; gap:5px}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px; margin:10px 0; scroll-margin-top:14px; overflow:hidden; box-shadow:var(--shadow)}
+  .card.flash{animation:flash 1.4s ease}
+  @keyframes flash{0%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:var(--shadow)}}
+  details.card > summary{list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 18px}
+  details.card > summary::-webkit-details-marker{display:none}
+  details.card > summary::before{content:"▸"; color:var(--muted); font-size:12px; flex:0 0 auto; transition:transform .15s}
+  details.card[open] > summary::before{transform:rotate(90deg)}
+  details.card > summary:hover{background:var(--surface-2)}
+  details.card[open] > summary{border-bottom:1px solid var(--line2)}
+  .card .cstar{font-size:19px; color:#d2cec6; cursor:pointer; user-select:none; line-height:1}
+  .card .cstar.on{color:var(--star)}
+  .card .cname{font-size:16px; font-weight:600; color:var(--ink)}
+  .card .vendor{font-size:12px; color:var(--muted)}
+  .card .csum{color:var(--ink2); font-size:13px; margin:0; flex-basis:100%; padding-left:22px; line-height:1.7}
+  .card-body{padding:6px 18px 18px}
+  .card .src{font-size:12px; color:var(--muted); margin-top:14px; word-break:break-all}
+  .card .src a{color:var(--accent); text-decoration:none}
+  .card .src a:hover{text-decoration:underline}
+  .kv{font-size:12px; color:var(--muted); margin-left:auto; text-align:right; white-space:nowrap; line-height:1.5; font-family:var(--mono)}
+
+  .block{margin-top:14px}
+  .block .lbl{font-size:10.5px; font-weight:600; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin-bottom:5px}
+  .block.usage{background:var(--accent-soft); border-radius:8px; padding:11px 14px}
+  .block.innov{background:color-mix(in srgb, var(--teal) 8%, transparent); border-radius:8px; padding:11px 14px}
+  .block.innov .lbl{color:var(--teal)}
+  .biz{display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:14px; font-size:12.5px; color:var(--ink2); line-height:1.7}
+  .biz b{color:var(--ink); font-weight:600}
+  code,.code{font-family:var(--mono); background:var(--surface-2); border:1px solid var(--line2); padding:.5px 5px; border-radius:4px; font-size:12px}
+
+  .cat-head{font-size:12px; font-weight:600; color:var(--accent); margin:26px 0 4px; letter-spacing:.03em}
+
+  details.proto{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:0 16px; box-shadow:var(--shadow)}
+  details.proto summary{cursor:pointer; padding:13px 0; font-weight:600; font-size:14px}
+  details.proto[open] summary{border-bottom:1px solid var(--line2); margin-bottom:8px}
+
+  footer{margin-top:44px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:18px; line-height:1.75}
+  footer ul{padding-left:18px}
+  footer a{color:var(--accent); word-break:break-all}
+
+  .changelog .cl{display:flex; gap:12px; padding:6px 0; border-bottom:1px dashed var(--line2); font-size:12.5px; color:var(--ink2)}
+  .changelog .cl time{font-family:var(--mono); color:var(--muted); flex:0 0 auto}
+
+  @media print{ body{background:#fff} .controls,.chip,.favtoggle{display:none} .card,.tbl-wrap,.note,details.proto{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>AI生成モデル リリース・ライブラリ</h1>
+    <p class="sub">画像・動画・3D・音声 生成モデルの公式一次情報リファレンス</p>
+    <div class="meta-row">
+      <span class="meta-pill">情報取得日: <b id="m-verified"></b></span>
+      <span class="meta-pill">収録: <b id="m-count"></b> モデル</span>
+      <span class="meta-pill">★お気に入り: <b id="m-fav"></b></span>
+      <span class="meta-pill">原則: <b>公式一次情報を正</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">0</span>このファイルの使い方 / 追記方法</h2>
+    <div class="note">
+      <b>運用前提：</b>新モデルのリリース情報（スクショ等）をClaude.aiに渡し、本ファイルも一緒に渡す。Claudeは下記プロトコルに従い、
+      <code>DATA</code>ブロックの <code>MODELS</code> 配列末尾に1件追記して完全版を返す。出力ファイルでローカル保存＆プロジェクトファイルを差し替える。<br>
+      <b>★お気に入り：</b>各行・各カードの星をクリックでトグル。状態はこのブラウザに保存され、<b>ファイルを差し替えても消えない</b>（idで紐付け）。
+    </div>
+    <details class="proto">
+      <summary>▶ AI追記プロトコル（Claudeへの指示。展開して確認）</summary>
+      <ol class="tight" style="font-size:13px">
+        <li>編集対象は <code>script</code> 内 <code>=== DATA START ===</code> から <code>=== DATA END ===</code> のみ。CSS・描画関数は触らない。</li>
+        <li>新モデルは <code>MODELS</code> 配列<b>末尾に追加</b>。既存は消さない。</li>
+        <li><code>official_url</code> を <b>web_fetchで再確認</b>してから記入。二次情報のみで <code>status:"official"</code> にしない。</li>
+        <li>確認できない項目は推測で埋めず <code>status:"unverified"</code> を維持。<code>last_verified</code> を確認日に。</li>
+        <li><code>CHANGELOG</code> 先頭に1行追記。<code>META.session_verified</code> を更新日に。</li>
+        <li><code>id</code> は星の紐付けキー。重複しない短い英数字で、一度決めたら変えない。</li>
+        <li><code>my_usage</code>（活用例）はユーザー固有。指示なく削除しない。</li>
+      </ol>
+    </details>
+  </section>
+
+  <section>
+    <h2><span class="num">凡</span>凡例</h2>
+    <h3>生成カテゴリ</h3>
+    <div class="legend" id="cat-legend"></div>
+    <h3>確認ステータス</h3>
+    <div class="legend">
+      <span class="item"><span class="badge s-official">公式確認済</span> official_url を当セッションで確認</span>
+      <span class="item"><span class="badge s-partial">公式(部分)</span> 一部のみ公式に明記</span>
+      <span class="item"><span class="badge s-unverified">未確認</span> 一次確認できていない</span>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">1</span>モデル一覧（ライブラリ）</h2>
+    <div class="controls">
+      <input type="search" id="search" placeholder="モデル名・用途・強みで検索（例: 人物 / 実写 / 参照保持）">
+      <select id="sort">
+        <option value="cat">並び替え: カテゴリ別</option>
+        <option value="date_desc">リリース日（新しい順）</option>
+        <option value="date_asc">リリース日（古い順）</option>
+        <option value="name">モデル名</option>
+        <option value="fav">お気に入り優先</option>
+      </select>
+      <div class="favtoggle" id="favtoggle"><span style="color:var(--star)">★</span> お気に入りのみ</div>
+    </div>
+    <div class="controls">
+      <div class="filters" id="cat-filters"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>★</th><th>モデル</th><th>カテゴリ</th><th>リリース日</th>
+          <th>強み</th><th>確認</th><th>取得日</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">行をクリックで下の詳細へジャンプ。★をクリックでお気に入り登録。</p>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>詳細</h2>
+    <div class="controls" style="margin-bottom:8px">
+      <button id="expandAll">全部ひらく</button>
+      <button id="collapseAll">全部たたむ</button>
+      <span style="font-size:12px;color:var(--muted)">モデル名をクリックで開閉</span>
+    </div>
+    <div id="details"></div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span>更新履歴</h2>
+    <div class="changelog" id="changelog"></div>
+  </section>
+
+  <footer>
+    <b>一次情報ソース（更新時はこれを再確認）</b>
+    <ul id="sources"></ul>
+    <p>本ライブラリは公式ドキュメント・公式リリースノートの確認結果に基づく。料金・商用利用条件・モデル仕様はバージョンや配信経路で変わるため、納品用途では各モデルの公式規約を都度確認すること。</p>
+  </footer>
+
+</div>
+
+<script>
+/* ============================ DATA START ============================ */
+/* 追記時はこのブロックのみ編集。official_url を web_fetch で再確認のこと。 */
+
+const META = {
+  session_verified: "2026-06-21",
+  app_version_note: "AI生成モデル リリース・ライブラリ / 一次情報主義"
+};
+
+const CHANGELOG = [
+  { date: "2026-06-21", note: "KAMUI 2026/06/18告知分を9件収録（Kling V3 Turbo i2v/t2v、LTX 2.3 音声/動画outpaint、Zonos v2 TTS）。元モデルの提供元情報を確認。" },
+  { date: "2026-06-21", note: "初版フォーマット作成。" }
+];
+
+/* カテゴリのキー→ラベル。新カテゴリが要るときだけ追加する。 */
+const CATEGORIES = {
+  t2i:     "画像生成 (t2i)",
+  i2i:     "画像編集・変換 (i2i)",
+  t2v:     "動画生成 (t2v)",
+  i2v:     "画像→動画 (i2v)",
+  v2v:     "動画→動画 (v2v)",
+  "3d":    "3D生成",
+  audio:   "音声・音楽",
+  upscale: "高解像度化・補完",
+  avatar:  "アバター・一貫性",
+  other:   "その他・統合"
+};
+
+/* status: official | partial | unverified */
+const MODELS = [
+  {
+    id:"i2v_kling_video_v3_turbo_pro",
+    name:"Kling Video V3 Turbo Pro (i2v)",
+    vendor:"Kuaishou / Kling AI（KAMUI経由）",
+    category:"i2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://www.openpr.com/news/4554630/kling-3-0-turbo-released-kling-ai-brings-fast-video-previews",
+    last_verified:"2026-06-21",
+    summary:"静止画から音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
+    can_do:[
+      "画像→動画（i2v）。1〜15秒の短尺プレビューを高速生成",
+      "音声を同時生成（ネイティブオーディオ／リップシンク改善）",
+      "first/last フレーム制御に対応",
+      "解像度の目安は720p/1080p（Turboは速度・コスト重視）"
+    ],
+    strengths:[ "高速プレビュー", "音声同期", "商品リール量産" ],
+    innovation:[ "音声込みの動画を低コスト・高速に生成する検証用ファストレーン" ],
+    my_usage:[],
+    pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒・1080p ¥1/秒（音声込み）。KAMUI経由のクレジット消費はアプリ内で要確認",
+    commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
+    note:"KAMUI表記「V3」=Kling公式「3.0」。Pro=品質重視ティア。Turbo各ティアの厳密な解像度/秒数はKling公式リリースノートで最終確認推奨。"
+  },
+  {
+    id:"i2v_kling_video_v3_turbo_standard",
+    name:"Kling Video V3 Turbo Standard (i2v)",
+    vendor:"Kuaishou / Kling AI（KAMUI経由）",
+    category:"i2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://www.openpr.com/news/4554630/kling-3-0-turbo-released-kling-ai-brings-fast-video-previews",
+    last_verified:"2026-06-21",
+    summary:"静止画から音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
+    can_do:[
+      "画像→動画（i2v）。短尺を高速・低コストで生成",
+      "音声を同時生成（ネイティブオーディオ）",
+      "first/last フレーム制御に対応"
+    ],
+    strengths:[ "低コスト", "高速", "比率違いの量産" ],
+    innovation:[ "音声付き動画プレビューをさらに安価に回せる標準ティア" ],
+    my_usage:[],
+    pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒〜（音声込み）。KAMUI経由のクレジットはアプリ内で要確認",
+    commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
+    note:"Standard=速度・コスト重視ティア。Pro比の品質/価格差分の厳密値は要確認。"
+  },
+  {
+    id:"t2v_kling_video_v3_turbo_pro",
+    name:"Kling Video V3 Turbo Pro (t2v)",
+    vendor:"Kuaishou / Kling AI（KAMUI経由）",
+    category:"t2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://www.openpr.com/news/4554630/kling-3-0-turbo-released-kling-ai-brings-fast-video-previews",
+    last_verified:"2026-06-21",
+    summary:"テキストから音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
+    can_do:[
+      "テキスト→動画（t2v）。1〜15秒の短尺プレビューを高速生成",
+      "音声を同時生成（ネイティブオーディオ／リップシンク改善）",
+      "first/last フレーム制御に対応"
+    ],
+    strengths:[ "高速プレビュー", "音声同期", "絵コンテ検証" ],
+    innovation:[ "テキストから音声込み動画を高速・低コストで試作" ],
+    my_usage:[],
+    pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒・1080p ¥1/秒（音声込み）。KAMUI経由はアプリ内で要確認",
+    commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
+    note:"Pro=品質重視ティア。Turboの厳密仕様はKling公式リリースノートで最終確認推奨。"
+  },
+  {
+    id:"t2v_kling_video_v3_turbo_standard",
+    name:"Kling Video V3 Turbo Standard (t2v)",
+    vendor:"Kuaishou / Kling AI（KAMUI経由）",
+    category:"t2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://www.openpr.com/news/4554630/kling-3-0-turbo-released-kling-ai-brings-fast-video-previews",
+    last_verified:"2026-06-21",
+    summary:"テキストから音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
+    can_do:[
+      "テキスト→動画（t2v）。短尺を高速・低コストで生成",
+      "音声を同時生成（ネイティブオーディオ）"
+    ],
+    strengths:[ "低コスト", "高速", "量産検証" ],
+    innovation:[ "テキスト発の音声付き動画を最安ラインで量産" ],
+    my_usage:[],
+    pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒〜（音声込み）。KAMUI経由はアプリ内で要確認",
+    commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
+    note:"Standard=速度・コスト重視ティア。厳密な差分は要確認。"
+  },
+  {
+    id:"t2a_ltx_2_3_quality",
+    name:"LTX 2.3 Quality (t2a / 音声生成)",
+    vendor:"Lightricks（KAMUI経由）",
+    category:"audio",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://ltx.io/model/ltx-2",
+    last_verified:"2026-06-21",
+    summary:"LTX-2系(2.3)の音声生成。テキストから音声を生成するQualityプリセット。",
+    can_do:[
+      "テキストから音声を生成（t2a）",
+      "LTX-2は本来 音声+映像を単一モデルで同期生成（ネイティブ4K/50fps）する基盤モデル"
+    ],
+    strengths:[ "同期オーディオ", "環境音/foley", "オープンウェイト" ],
+    innovation:[ "オープンウェイト＋学習コード公開で、コンシューマGPUでも動く音声映像基盤モデル" ],
+    my_usage:[],
+    pricing:"LTX-2はオープンウェイト（自前RTX 5080で自己ホスト可）。KAMUI経由のクレジットはアプリ内で要確認",
+    commercial:"オープンウェイト。商用はLTX-2のライセンス条項を要確認",
+    note:"LTX-2の看板は音声+映像の同時生成。音声単体(t2a)としての公式仕様・上限は要確認。"
+  },
+  {
+    id:"t2a_ltx_2_3_quality_lora",
+    name:"LTX 2.3 Quality Lora (t2a / 音声生成)",
+    vendor:"Lightricks（KAMUI経由）",
+    category:"audio",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://ltx.io/model/ltx-2",
+    last_verified:"2026-06-21",
+    summary:"LTX 2.3 音声生成のLoRA対応版。カスタムLoRAで傾向を寄せられる想定。",
+    can_do:[
+      "テキストから音声を生成（t2a）＋LoRAによる調整",
+      "LTX-2系の音声生成パイプラインを利用"
+    ],
+    strengths:[ "LoRAカスタム", "同期オーディオ", "オープンウェイト" ],
+    innovation:[ "LoRAで音の傾向をプロジェクト固有に寄せられる" ],
+    my_usage:[],
+    pricing:"LTX-2はオープンウェイト（自己ホスト可）。KAMUI経由はアプリ内で要確認",
+    commercial:"オープンウェイト。商用はLTX-2のライセンス条項を要確認",
+    note:"_lora=LoRA適用版。対応LoRA/適用方法の詳細はKAMUI/LTX側で要確認。"
+  },
+  {
+    id:"v2v_ltx_2_3_quality_outpaint",
+    name:"LTX 2.3 Quality Outpaint (v2v)",
+    vendor:"Lightricks（KAMUI経由）",
+    category:"v2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://ltx.io/model/ltx-2",
+    last_verified:"2026-06-21",
+    summary:"動画の画面外を時間方向に一貫して拡張する動画アウトペイント（LTX 2.3, IC-LoRA）。",
+    can_do:[
+      "既存動画のフレームを上下左右に拡張（アウトペイント）",
+      "アスペクト比変更・縦/横リフレーム、シネマ的な再フレーミング",
+      "モーション/ライティング/遠近を時間方向に保ったまま生成、音声同期も可"
+    ],
+    strengths:[ "アスペクト比変更", "継続性保持", "リフレーミング" ],
+    innovation:[ "IC-LoRAガイドで追加領域を時間的に一貫して埋める動画アウトペイント" ],
+    my_usage:[],
+    pricing:"LTX-2はオープンウェイト（自前RTX 5080で自己ホスト可）。KAMUI経由はアプリ内で要確認",
+    commercial:"オープンウェイト。商用はLTX-2のライセンス条項を要確認",
+    note:"LTX 2.3 22Bチェックポイント＋IC-LoRA Outpaintモジュール。outpaint仕様はComfyUI実装系の二次情報が中心、LTX公式ページで最終確認推奨。"
+  },
+  {
+    id:"v2v_ltx_2_3_quality_outpaint_lora",
+    name:"LTX 2.3 Quality Outpaint Lora (v2v)",
+    vendor:"Lightricks（KAMUI経由）",
+    category:"v2v",
+    release_date:"2026-06-18",
+    status:"partial",
+    official_url:"https://ltx.io/model/ltx-2",
+    last_verified:"2026-06-21",
+    summary:"LTX 2.3 動画アウトペイントのLoRA対応版（IC-LoRA Outpaint）。",
+    can_do:[
+      "動画フレームの拡張（アウトペイント）＋LoRAによる調整",
+      "アスペクト比変更・リフレーミング、音声同期も可"
+    ],
+    strengths:[ "LoRAカスタム", "アスペクト比変更", "継続性保持" ],
+    innovation:[ "拡張領域の質感/傾向をLoRAで寄せられる動画アウトペイント" ],
+    my_usage:[],
+    pricing:"LTX-2はオープンウェイト（自己ホスト可）。KAMUI経由はアプリ内で要確認",
+    commercial:"オープンウェイト。商用はLTX-2のライセンス条項を要確認",
+    note:"_lora=IC-LoRA適用版。詳細はKAMUI/LTX側で要確認。"
+  },
+  {
+    id:"t2s_zonos_v_2_0",
+    name:"Zonos v2 (Text To Speech)",
+    vendor:"Zyphra（KAMUI経由）",
+    category:"audio",
+    release_date:"2026-06-18",
+    status:"official",
+    official_url:"https://www.zyphra.com/models/zonos2",
+    last_verified:"2026-06-21",
+    summary:"オープンウェイトのMoE音声合成。ゼロショット音声クローンと多言語対応のTTS。",
+    can_do:[
+      "テキスト→音声（TTS）。数秒〜30秒の参照音声でゼロショット音声クローン",
+      "多言語対応（英・日・中・仏・独ほか多数）",
+      "話速/ピッチ/感情などの細かな制御、44.1kHz出力、低レイテンシ"
+    ],
+    strengths:[ "音声クローン", "日本語対応", "高自然性/低レイテンシ" ],
+    innovation:[ "オープンソースTTSで初のMoE(MoE++系)アーキテクチャ。600万時間超で学習" ],
+    my_usage:[],
+    pricing:"ZONOS2はMITライセンス（自前GPUで自己ホスト可）。Zyphra Cloudはリリース後一定期間 無償。KAMUI経由はアプリ内で要確認",
+    commercial:"ZONOS2本体はMITライセンスで商用可。KAMUI/ホスト版の利用規約は別途確認",
+    note:"KAMUIスラッグ t2s_zonos_v_2_0 = Zyphra ZONOS2(Zonos V2)。元モデルは2026年6月前後に公開。"
+  }
+];
+
+/* ============================ DATA END ============================ */
+
+
+/* ----------------- レンダリング（追記時は触らない） ----------------- */
+const STATUS_LABEL = {official:"公式確認済", partial:"公式(部分)", unverified:"未確認"};
+const STATUS_CLASS = {official:"s-official", partial:"s-partial", unverified:"s-unverified"};
+const FAV_KEY = "ai_model_lib_favs_v1";
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function badge(cls,txt){return '<span class="badge '+cls+'">'+esc(txt)+'</span>';}
+function list(arr){return '<ul class="tight">'+(arr&&arr.length?arr:['—']).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';}
+function tags(arr){return '<div class="tags-inline">'+(arr&&arr.length?arr:['—']).map(x=>'<span class="badge tag">'+esc(x)+'</span>').join('')+'</div>';}
+function catLabel(k){return CATEGORIES[k]||k;}
+
+function loadFavs(){ try{ return new Set(JSON.parse(localStorage.getItem(FAV_KEY)||"[]")); }catch(e){ return new Set(); } }
+function saveFavs(set){ try{ localStorage.setItem(FAV_KEY, JSON.stringify([...set])); }catch(e){} }
+
+(function(){
+  let favs = loadFavs();
+  let active = "all";
+  let sortMode = "cat";
+  let favOnly = false;
+  let openIds = new Set();
+
+  document.getElementById("m-verified").textContent = META.session_verified;
+  document.getElementById("m-count").textContent = MODELS.length;
+
+  const tbody = document.getElementById("tbody");
+  const cards = document.getElementById("details");
+  const catFilters = document.getElementById("cat-filters");
+  const catLegend = document.getElementById("cat-legend");
+  const search = document.getElementById("search");
+  const sortSel = document.getElementById("sort");
+  const favToggle = document.getElementById("favtoggle");
+  const expandAllBtn = document.getElementById("expandAll");
+  const collapseAllBtn = document.getElementById("collapseAll");
+
+  // 凡例（カテゴリ）
+  catLegend.innerHTML = Object.keys(CATEGORIES).map(k=>
+    '<span class="item"><span class="badge cat-badge">'+esc(catLabel(k))+'</span></span>'
+  ).join('');
+
+  // カテゴリフィルタ chip
+  const cats = ["all", ...Object.keys(CATEGORIES)];
+  catFilters.innerHTML = cats.map(k=>
+    '<span class="chip'+(k==="all"?" active":"")+'" data-cat="'+k+'">'+esc(k==="all"?"すべて":catLabel(k))+'</span>'
+  ).join('');
+  catFilters.querySelectorAll(".chip").forEach(ch=>ch.addEventListener("click",()=>{
+    active = ch.dataset.cat;
+    catFilters.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x===ch));
+    render();
+  }));
+
+  search.addEventListener("input", render);
+  sortSel.addEventListener("change", ()=>{ sortMode = sortSel.value; render(); });
+  favToggle.addEventListener("click", ()=>{ favOnly=!favOnly; favToggle.classList.toggle("active",favOnly); render(); });
+  expandAllBtn.addEventListener("click", ()=>{ MODELS.filter(match).forEach(m=>openIds.add(m.id)); render(); });
+  collapseAllBtn.addEventListener("click", ()=>{ openIds.clear(); render(); });
+
+  function toggleFav(id){
+    if(favs.has(id)) favs.delete(id); else favs.add(id);
+    saveFavs(favs); render();
+  }
+
+  function match(m){
+    if(active!=="all" && m.category!==active) return false;
+    if(favOnly && !favs.has(m.id)) return false;
+    const q = search.value.trim().toLowerCase();
+    if(!q) return true;
+    const hay = (m.name+" "+(m.vendor||"")+" "+m.summary+" "+(m.can_do||[]).join(" ")+" "+(m.strengths||[]).join(" ")+" "+(m.innovation||[]).join(" ")+" "+(m.my_usage||[]).join(" ")+" "+catLabel(m.category)).toLowerCase();
+    return hay.includes(q);
+  }
+
+  function sortList(arr){
+    const a = arr.slice();
+    if(sortMode==="date_desc") a.sort((x,y)=>(y.release_date||"").localeCompare(x.release_date||""));
+    else if(sortMode==="date_asc") a.sort((x,y)=>(x.release_date||"").localeCompare(y.release_date||""));
+    else if(sortMode==="name") a.sort((x,y)=>x.name.localeCompare(y.name,"ja"));
+    else if(sortMode==="fav") a.sort((x,y)=>(favs.has(y.id)?1:0)-(favs.has(x.id)?1:0));
+    return a;
+  }
+
+  function starCell(m){
+    const on = favs.has(m.id);
+    return '<td class="star'+(on?" on":"")+'" data-fav="'+esc(m.id)+'">'+(on?"★":"☆")+'</td>';
+  }
+
+  function render(){
+    document.getElementById("m-fav").textContent = favs.size;
+    const shown = sortList(MODELS.filter(match));
+
+    // テーブル
+    tbody.innerHTML = shown.map(m=>(
+      '<tr data-id="'+esc(m.id)+'">'
+      + starCell(m)
+      + '<td class="name">'+esc(m.name)+'</td>'
+      + '<td>'+esc(catLabel(m.category))+'</td>'
+      + '<td><span class="ver">'+esc(m.release_date||"—")+'</span></td>'
+      + '<td>'+tags((m.strengths||[]).slice(0,3))+'</td>'
+      + '<td>'+badge(STATUS_CLASS[m.status]||"s-unverified", STATUS_LABEL[m.status]||"未確認")+'</td>'
+      + '<td><span class="ver">'+esc(m.last_verified||"—")+'</span></td>'
+      + '</tr>'
+    )).join('') || '<tr><td colspan="7" style="color:var(--muted);padding:18px">該当なし</td></tr>';
+
+    tbody.querySelectorAll("td.star").forEach(td=>td.addEventListener("click",e=>{
+      e.stopPropagation(); toggleFav(td.dataset.fav);
+    }));
+    tbody.querySelectorAll("tr[data-id]").forEach(tr=>tr.addEventListener("click",()=>{
+      const id=tr.dataset.id;
+      const el=document.getElementById("card-"+id);
+      if(el){
+        openIds.add(id); el.open=true;
+        el.scrollIntoView({behavior:"smooth",block:"start"});
+        el.classList.remove("flash");void el.offsetWidth;el.classList.add("flash");
+      }
+    }));
+
+    // 詳細カード（アコーディオン）
+    let html="";
+    function cardHTML(m){
+      const on = favs.has(m.id);
+      const openAttr = openIds.has(m.id) ? " open" : "";
+      return '<details class="card"'+openAttr+' id="card-'+esc(m.id)+'">'
+        + '<summary>'
+          + '<span class="cstar'+(on?" on":"")+'" data-fav="'+esc(m.id)+'">'+(on?"\u2605":"\u2606")+'</span>'
+          + '<span class="cname">'+esc(m.name)+'</span>'
+          + (m.vendor?'<span class="vendor">'+esc(m.vendor)+'</span>':'')
+          + '<span class="badge cat-badge">'+esc(catLabel(m.category))+'</span>'
+          + badge(STATUS_CLASS[m.status]||"s-unverified", STATUS_LABEL[m.status]||"未確認")
+          + '<span class="kv">リリース '+esc(m.release_date||"—")+'<br>取得日 '+esc(m.last_verified||"—")+'</span>'
+          + '<span class="csum">'+esc(m.summary)+'</span>'
+        + '</summary>'
+        + '<div class="card-body">'
+          + '<div class="block"><div class="lbl">何ができるか</div>'+list(m.can_do)+'</div>'
+          + '<div class="block"><div class="lbl">何に強いか</div>'+tags(m.strengths)+'</div>'
+          + ((m.innovation&&m.innovation.length)?'<div class="block innov"><div class="lbl">革新的な部分</div>'+list(m.innovation)+'</div>':'')
+          + '<div class="block usage"><div class="lbl">私の活用例</div>'+list(m.my_usage)+'</div>'
+          + '<div class="biz">'
+            + (m.pricing?'<span><b>料金:</b> '+esc(m.pricing)+'</span>':'')
+            + (m.commercial?'<span><b>商用:</b> '+esc(m.commercial)+'</span>':'')
+            + (m.note?'<span><b>メモ:</b> '+esc(m.note)+'</span>':'')
+          + '</div>'
+          + '<div class="src">一次情報: <a href="'+esc(m.official_url)+'" target="_blank" rel="noopener">'+esc(m.official_url)+'</a></div>'
+        + '</div>'
+      + '</details>';
+    }
+
+    if(sortMode==="cat"){
+      Object.keys(CATEGORIES).forEach(cat=>{
+        const group = shown.filter(m=>m.category===cat);
+        if(!group.length) return;
+        html += '<div class="cat-head">'+esc(catLabel(cat))+'</div>';
+        group.forEach(m=> html += cardHTML(m));
+      });
+    } else {
+      shown.forEach(m=> html += cardHTML(m));
+    }
+    cards.innerHTML = html || '<div class="note">該当なし</div>';
+
+    cards.querySelectorAll(".cstar").forEach(s=>s.addEventListener("click",e=>{
+      e.preventDefault(); e.stopPropagation(); toggleFav(s.dataset.fav);
+    }));
+    cards.querySelectorAll("details.card").forEach(d=>{
+      const id=d.id.replace(/^card-/,"");
+      d.addEventListener("toggle",()=>{ if(d.open) openIds.add(id); else openIds.delete(id); });
+    });
+  }
+
+  // changelog
+  document.getElementById("changelog").innerHTML = CHANGELOG.map(e=>(
+    '<div class="cl"><time>'+esc(e.date)+'</time><span>'+esc(e.note)+'</span></div>'
+  )).join('');
+
+  // sources
+  const urls=[...new Set(MODELS.map(m=>m.official_url).filter(Boolean))];
+  document.getElementById("sources").innerHTML = urls.map(u=>'<li><a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a></li>').join('');
+
+  render();
+})();
+</script>
+</body>
+</html>
