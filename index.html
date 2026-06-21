@@ -19,7 +19,7 @@
   1. 編集対象は下部 script 内の「=== DATA START ===」から「=== DATA END ===」のみ。
      HTML構造・CSS・レンダリング関数は指示がない限り変更しない。
   2. 新しいモデルは MODELS 配列の末尾にオブジェクトを1件追加する（既存は消さない）。
-  3. 各モデルは必ず official_url の公式一次情報を web_fetch で再確認してから記入する。
+  3. official_url は web_fetch で実在確認する。リダイレクト先が404/エラーページでなく、対象モデルに言及していることまで確認（200が返るだけ・公式ドメイン一致だけでは採用しない）。
      二次情報（ブログ・まとめ等）だけで status を "official" にしてはならない。
   4. 確認できた項目は last_verified を確認日(YYYY-MM-DD)に更新する。
      確認できなかった項目は推測で埋めず、status を "unverified" のままにする。
@@ -221,7 +221,7 @@
       <ol class="tight" style="font-size:13px">
         <li>編集対象は <code>script</code> 内 <code>=== DATA START ===</code> から <code>=== DATA END ===</code> のみ。CSS・描画関数は触らない。</li>
         <li>新モデルは <code>MODELS</code> 配列<b>末尾に追加</b>。既存は消さない。</li>
-        <li><code>official_url</code> を <b>web_fetchで再確認</b>してから記入。二次情報のみで <code>status:"official"</code> にしない。</li>
+        <li><code>official_url</code> を <b>web_fetchで実在確認</b>。リダイレクト先が404/エラーでなく対象モデルに言及することまで確認（200やドメイン一致だけで <code>status:"official"</code> にしない）。</li>
         <li>確認できない項目は推測で埋めず <code>status:"unverified"</code> を維持。<code>last_verified</code> を確認日に。</li>
         <li><code>CHANGELOG</code> 先頭に1行追記。<code>META.session_verified</code> を更新日に。</li>
         <li><code>id</code> は星の紐付けキー。重複しない短い英数字で、一度決めたら変えない。</li>
@@ -314,6 +314,7 @@ const META = {
 };
 
 const CHANGELOG = [
+  { date: "2026-06-21", note: "Kling 4件のofficial_urlを修正：app.klingai.com/global/release-notesは404(kling.aiへリダイレクト)のため、実在確認済みのKuaishou IR公式プレスに差し替え。追記プロトコルにURL実在確認(404/対象言及まで確認)を明文化。" },
   { date: "2026-06-21", note: "リリース傾向ダッシュボード（カテゴリ×日付/日別構成/カテゴリ合計）をタブ表示で追加。MODELSから自動集計し依存ライブラリなし。" },
   { date: "2026-06-21", note: "KAMUI 6/13分8件・6/20分7件を追加（計24件）。Kling 4件のofficial_urlをopenpr→Kling公式リリースノートに差し替え。全件公式一次情報を確認。" },
   { date: "2026-06-21", note: "KAMUI 2026/06/18告知分を9件収録（Kling V3 Turbo i2v/t2v、LTX 2.3 音声/動画outpaint、Zonos v2 TTS）。元モデルの提供元情報を確認。" },
@@ -344,7 +345,7 @@ const MODELS = [
     category:"i2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://app.klingai.com/global/release-notes",
+    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
     last_verified:"2026-06-21",
     summary:"静止画から音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
     can_do:[
@@ -367,7 +368,7 @@ const MODELS = [
     category:"i2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://app.klingai.com/global/release-notes",
+    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
     last_verified:"2026-06-21",
     summary:"静止画から音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
     can_do:[
@@ -389,7 +390,7 @@ const MODELS = [
     category:"t2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://app.klingai.com/global/release-notes",
+    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
     last_verified:"2026-06-21",
     summary:"テキストから音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
     can_do:[
@@ -411,7 +412,7 @@ const MODELS = [
     category:"t2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://app.klingai.com/global/release-notes",
+    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
     last_verified:"2026-06-21",
     summary:"テキストから音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
     can_do:[
