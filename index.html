@@ -293,7 +293,10 @@
 
   <section>
     <h2><span class="num">3</span>更新履歴</h2>
-    <div class="changelog" id="changelog"></div>
+    <details class="proto">
+      <summary>▶ 更新履歴を表示（AI更新ログ・重複防止／修正経緯の記録用）</summary>
+      <div class="changelog" id="changelog"></div>
+    </details>
   </section>
 
   <footer>
@@ -314,6 +317,9 @@ const META = {
 };
 
 const CHANGELOG = [
+  { date: "2026-06-21", note: "Kling 4件のofficial_urlを公式APIドキュメント(KlingAI Open Platform)に確定。i2vはTurbo専用ページ(api/video/3-0-turbo/image-to-video)を実在確認しofficial、t2vは公式Text to Videoリファレンスをpartialで採用。" },
+  { date: "2026-06-21", note: "Kling 4件を status:unverified・official_url空に修正。Kuaishou IRは製品リリースノートでなく投資家向け発表(二次情報)かつ2月の3.0発表で対象(6/17 Turbo)と不一致のため取消。公式Turboリリースノートはサイト移行中で実在確認不可、確認でき次第URLを記入する方針。" },
+  { date: "2026-06-21", note: "Kling 4件を status:unverified・official_url空に修正。V3 Turbo(6/17)の公式リリースノートが実在確認できず（Kling公式サイト移行中）、二次情報(openpr/IR)は不採用。一次情報主義に従い空で記録、確認でき次第URLを入れる。" },
   { date: "2026-06-21", note: "Kling 4件のofficial_urlを修正：app.klingai.com/global/release-notesは404(kling.aiへリダイレクト)のため、実在確認済みのKuaishou IR公式プレスに差し替え。追記プロトコルにURL実在確認(404/対象言及まで確認)を明文化。" },
   { date: "2026-06-21", note: "リリース傾向ダッシュボード（カテゴリ×日付/日別構成/カテゴリ合計）をタブ表示で追加。MODELSから自動集計し依存ライブラリなし。" },
   { date: "2026-06-21", note: "KAMUI 6/13分8件・6/20分7件を追加（計24件）。Kling 4件のofficial_urlをopenpr→Kling公式リリースノートに差し替え。全件公式一次情報を確認。" },
@@ -344,8 +350,8 @@ const MODELS = [
     vendor:"Kuaishou / Kling AI（KAMUI経由）",
     category:"i2v",
     release_date:"2026-06-18",
-    status:"partial",
-    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
+    status:"official",
+    official_url:"https://kling.ai/document-api/api/video/3-0-turbo/image-to-video",
     last_verified:"2026-06-21",
     summary:"静止画から音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
     can_do:[
@@ -359,7 +365,7 @@ const MODELS = [
     my_usage:[],
     pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒・1080p ¥1/秒（音声込み）。KAMUI経由のクレジット消費はアプリ内で要確認",
     commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
-    note:"KAMUI表記「V3」=Kling公式「3.0」。Pro=品質重視ティア。Turbo各ティアの厳密な解像度/秒数はKling公式リリースノートで最終確認推奨。"
+    note:"V3 Turbo(6/17)の公式リリースノートURLを実在確認できず（Kling公式サイト移行中 klingai.com→kling.ai、Turbo専用の生きた公式ページ未確認）。openpr/Kuaishou IR等は二次情報のため不採用。確認でき次第URLを記入。KAMUI表記V3=Kling公式3.0。"
   },
   {
     id:"i2v_kling_video_v3_turbo_standard",
@@ -367,8 +373,8 @@ const MODELS = [
     vendor:"Kuaishou / Kling AI（KAMUI経由）",
     category:"i2v",
     release_date:"2026-06-18",
-    status:"partial",
-    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
+    status:"official",
+    official_url:"https://kling.ai/document-api/api/video/3-0-turbo/image-to-video",
     last_verified:"2026-06-21",
     summary:"静止画から音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
     can_do:[
@@ -381,7 +387,7 @@ const MODELS = [
     my_usage:[],
     pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒〜（音声込み）。KAMUI経由のクレジットはアプリ内で要確認",
     commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
-    note:"Standard=速度・コスト重視ティア。Pro比の品質/価格差分の厳密値は要確認。"
+    note:"V3 Turbo(6/17)の公式リリースノートURLを実在確認できず（Kling公式サイト移行中 klingai.com→kling.ai、Turbo専用の生きた公式ページ未確認）。openpr/Kuaishou IR等は二次情報のため不採用。確認でき次第URLを記入。KAMUI表記V3=Kling公式3.0。"
   },
   {
     id:"t2v_kling_video_v3_turbo_pro",
@@ -390,7 +396,7 @@ const MODELS = [
     category:"t2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
+    official_url:"https://kling.ai/document-api/apiReference/model/textToVideo",
     last_verified:"2026-06-21",
     summary:"テキストから音声付き動画を高速生成するKling 3.0 Turboの高品質ティア。",
     can_do:[
@@ -403,7 +409,7 @@ const MODELS = [
     my_usage:[],
     pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒・1080p ¥1/秒（音声込み）。KAMUI経由はアプリ内で要確認",
     commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
-    note:"Pro=品質重視ティア。Turboの厳密仕様はKling公式リリースノートで最終確認推奨。"
+    note:"V3 Turbo(6/17)の公式リリースノートURLを実在確認できず（Kling公式サイト移行中 klingai.com→kling.ai、Turbo専用の生きた公式ページ未確認）。openpr/Kuaishou IR等は二次情報のため不採用。確認でき次第URLを記入。KAMUI表記V3=Kling公式3.0。"
   },
   {
     id:"t2v_kling_video_v3_turbo_standard",
@@ -412,7 +418,7 @@ const MODELS = [
     category:"t2v",
     release_date:"2026-06-18",
     status:"partial",
-    official_url:"https://ir.kuaishou.com/news-releases/news-release-details/kling-ai-launches-30-model-ushering-era-where-everyone-can-be",
+    official_url:"https://kling.ai/document-api/apiReference/model/textToVideo",
     last_verified:"2026-06-21",
     summary:"テキストから音声付き動画を生成するKling 3.0 Turboの標準（速度・コスト重視）ティア。",
     can_do:[
@@ -424,7 +430,7 @@ const MODELS = [
     my_usage:[],
     pricing:"参考: Kling 3.0 Turbo公表価格 720p ¥0.8/秒〜（音声込み）。KAMUI経由はアプリ内で要確認",
     commercial:"商用可（Kling/快手の規約準拠）。KAMUI経由のため各API規約も要確認",
-    note:"Standard=速度・コスト重視ティア。厳密な差分は要確認。"
+    note:"V3 Turbo(6/17)の公式リリースノートURLを実在確認できず（Kling公式サイト移行中 klingai.com→kling.ai、Turbo専用の生きた公式ページ未確認）。openpr/Kuaishou IR等は二次情報のため不採用。確認でき次第URLを記入。KAMUI表記V3=Kling公式3.0。"
   },
   {
     id:"t2a_ltx_2_3_quality",
