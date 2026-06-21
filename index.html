@@ -167,6 +167,32 @@
   .changelog .cl time{font-family:var(--mono); color:var(--muted); flex:0 0 auto}
 
   @media print{ body{background:#fff} .controls,.chip,.favtoggle{display:none} .card,.tbl-wrap,.note,details.proto{break-inside:avoid} }
+
+/* ===== リリース傾向ダッシュボード（追加・既存スタイル非干渉） ===== */
+.tr-tabs{display:flex; flex-wrap:wrap; gap:8px; margin:2px 0 16px}
+.tr-tab{font:inherit; font-size:12.5px; padding:6px 14px; border:1px solid var(--line); background:var(--surface); color:var(--ink2); border-radius:20px; cursor:pointer; transition:.15s; white-space:nowrap}
+.tr-tab:hover{border-color:var(--ink2)}
+.tr-tab.active{background:var(--accent); border-color:var(--accent); color:#fff}
+.tr-panel{min-height:236px}
+.tr-note{font-size:11.5px; color:var(--muted); margin:14px 0 0}
+.tr-matrix{width:100%; border-collapse:collapse; font-size:12.5px}
+.tr-matrix th,.tr-matrix td{border:1px solid var(--line); padding:8px 9px; text-align:center; line-height:1.4}
+.tr-matrix th{font-weight:600; color:var(--ink2); background:var(--surface-2)}
+.tr-matrix td.lbl{text-align:left; color:var(--ink); white-space:nowrap}
+.tr-matrix .tot{font-family:var(--mono); font-weight:600}
+.tr-matrix tr.totrow td{font-family:var(--mono); font-weight:600; background:var(--surface-2)}
+.tr-cell{font-family:var(--mono)}
+.tr-row{display:flex; align-items:center; gap:10px; margin:0 0 11px; font-size:12.5px}
+.tr-rowlbl{flex:0 0 116px; color:var(--ink2)}
+.tr-track{flex:1; display:flex; height:22px; border-radius:5px; overflow:hidden; background:var(--surface-2); border:1px solid var(--line)}
+.tr-seg{height:100%}
+.tr-barwrap{flex:1}
+.tr-bar{height:22px; border-radius:5px; min-width:2px}
+.tr-rowtot{flex:0 0 30px; text-align:right; font-family:var(--mono); color:var(--ink2)}
+.tr-legend{display:flex; flex-wrap:wrap; gap:9px 16px; margin:16px 0 0; font-size:11.5px; color:var(--ink2)}
+.tr-leg{display:flex; align-items:center; gap:6px}
+.tr-dot{width:11px; height:11px; border-radius:3px; flex:none}
+@media print{ .tr-tabs{display:none} }
 </style>
 </head>
 <body>
@@ -214,6 +240,17 @@
       <span class="item"><span class="badge s-partial">公式(部分)</span> 一部のみ公式に明記</span>
       <span class="item"><span class="badge s-unverified">未確認</span> 一次確認できていない</span>
     </div>
+  </section>
+
+  <section>
+    <h2><span class="num">推</span>リリース傾向</h2>
+    <div class="tr-tabs" id="trTabs">
+      <button class="tr-tab active" data-view="matrix">カテゴリ×日付</button>
+      <button class="tr-tab" data-view="date">日別の構成</button>
+      <button class="tr-tab" data-view="cat">カテゴリ合計</button>
+    </div>
+    <div class="tr-panel" id="trPanel"></div>
+    <p class="tr-note">※ 収録データから自動集計。モデルを追記すると自動で更新されます（手動編集不要）。</p>
   </section>
 
   <section>
@@ -277,6 +314,7 @@ const META = {
 };
 
 const CHANGELOG = [
+  { date: "2026-06-21", note: "リリース傾向ダッシュボード（カテゴリ×日付/日別構成/カテゴリ合計）をタブ表示で追加。MODELSから自動集計し依存ライブラリなし。" },
   { date: "2026-06-21", note: "KAMUI 6/13分8件・6/20分7件を追加（計24件）。Kling 4件のofficial_urlをopenpr→Kling公式リリースノートに差し替え。全件公式一次情報を確認。" },
   { date: "2026-06-21", note: "KAMUI 2026/06/18告知分を9件収録（Kling V3 Turbo i2v/t2v、LTX 2.3 音声/動画outpaint、Zonos v2 TTS）。元モデルの提供元情報を確認。" },
   { date: "2026-06-21", note: "初版フォーマット作成。" }
@@ -945,6 +983,57 @@ function saveFavs(set){ try{ localStorage.setItem(FAV_KEY, JSON.stringify([...se
   document.getElementById("sources").innerHTML = urls.map(u=>'<li><a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a></li>').join('');
 
   render();
+})();
+
+/* ===== リリース傾向ダッシュボード：MODELSから自動集計（既存関数・データ非干渉） ===== */
+(function(){
+  var PANEL=document.getElementById("trPanel"), TABS=document.getElementById("trTabs");
+  if(!PANEL||!TABS||typeof MODELS==="undefined") return;
+  var VARS=["--accent","--info","--teal","--ok","--warn","--bad","--gray","--muted"];
+  var dates=[...new Set(MODELS.map(m=>m.release_date))].sort();
+  var cats=Object.keys(CATEGORIES).filter(c=>MODELS.some(m=>m.category===c));
+  var color={}; cats.forEach((c,i)=>color[c]="var("+VARS[i%VARS.length]+")");
+  var cnt=(c,d)=>MODELS.filter(m=>m.category===c&&(d==null||m.release_date===d)).length;
+  var catTot=c=>MODELS.filter(m=>m.category===c).length;
+  var dateTot=d=>MODELS.filter(m=>m.release_date===d).length;
+  var lbl=c=>CATEGORIES[c], fmtD=d=>d.slice(5).replace("-","/");
+  function legend(){return '<div class="tr-legend">'+cats.map(c=>'<span class="tr-leg"><span class="tr-dot" style="background:'+color[c]+'"></span>'+lbl(c)+'</span>').join("")+'</div>';}
+  function matrix(){
+    var mx=Math.max(1,...cats.map(c=>Math.max(...dates.map(d=>cnt(c,d)))));
+    var h='<table class="tr-matrix"><thead><tr><th class="lbl">カテゴリ \\ リリース日</th>'+dates.map(d=>'<th>'+fmtD(d)+'</th>').join("")+'<th class="tot">計</th></tr></thead><tbody>';
+    cats.forEach(function(c){
+      h+='<tr><td class="lbl">'+lbl(c)+'</td>';
+      dates.forEach(function(d){var n=cnt(c,d);var pct=n?12+Math.round(n/mx*60):0;
+        h+='<td class="tr-cell" style="background:'+(n?'color-mix(in srgb, '+color[c]+' '+pct+'%, transparent)':'transparent')+'">'+(n||"")+'</td>';});
+      h+='<td class="tot">'+catTot(c)+'</td></tr>';
+    });
+    h+='<tr class="totrow"><td class="lbl">計</td>'+dates.map(d=>'<td>'+dateTot(d)+'</td>').join("")+'<td class="tot">'+MODELS.length+'</td></tr>';
+    return h+'</tbody></table>';
+  }
+  function byDate(){
+    var h="";
+    dates.forEach(function(d){
+      var t=dateTot(d);
+      var segs=cats.filter(c=>cnt(c,d)>0).map(function(c){var n=cnt(c,d);
+        return '<div class="tr-seg" style="width:'+(n/t*100)+'%;background:'+color[c]+'" title="'+lbl(c)+' '+n+'"></div>';}).join("");
+      h+='<div class="tr-row"><div class="tr-rowlbl">'+fmtD(d)+'</div><div class="tr-track">'+segs+'</div><div class="tr-rowtot">'+t+'</div></div>';
+    });
+    return h+legend();
+  }
+  function byCat(){
+    var sorted=cats.slice().sort((a,b)=>catTot(b)-catTot(a));
+    var mx=Math.max(1,...sorted.map(catTot)), h="";
+    sorted.forEach(function(c){var n=catTot(c);
+      h+='<div class="tr-row"><div class="tr-rowlbl">'+lbl(c)+'</div><div class="tr-barwrap"><div class="tr-bar" style="width:'+(n/mx*100)+'%;background:'+color[c]+'"></div></div><div class="tr-rowtot">'+n+'</div></div>';});
+    return h;
+  }
+  var views={matrix:matrix,date:byDate,cat:byCat};
+  function show(v){PANEL.innerHTML=(views[v]||matrix)();}
+  TABS.querySelectorAll(".tr-tab").forEach(function(b){b.addEventListener("click",function(){
+    TABS.querySelectorAll(".tr-tab").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); show(b.dataset.view);
+  });});
+  show("matrix");
 })();
 </script>
 </body>
